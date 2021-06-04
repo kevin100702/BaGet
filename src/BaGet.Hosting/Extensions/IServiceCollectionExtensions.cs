@@ -1,9 +1,9 @@
 using System;
 using BaGet.Core;
 using BaGet.Hosting;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 
 namespace BaGet
 {

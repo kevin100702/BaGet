@@ -1,6 +1,7 @@
 using System;
 using BaGet.Core;
 using BaGet.Hosting;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
@@ -42,6 +43,9 @@ namespace BaGet
 
             services.AddSpaStaticFiles(ConfigureSpaStaticFiles);
             services.AddBaGetWebApplication(ConfigureBaGetApplication);
+
+            services.AddAuthentication("BasicAuthentication")
+                .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
 
             // You can swap between implementations of subsystems like storage and search using BaGet's configuration.
             // Each subsystem's implementation has a provider that reads the configuration to determine if it should be
@@ -98,6 +102,9 @@ namespace BaGet
             app.UseSpaStaticFiles();
 
             app.UseRouting();
+
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseCors(ConfigureBaGetOptions.CorsPolicy);
             app.UseOperationCancelledMiddleware();
