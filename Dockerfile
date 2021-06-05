@@ -2,6 +2,14 @@ FROM mcr.microsoft.com/dotnet/core/aspnet:3.1 AS base
 WORKDIR /app
 EXPOSE 80
 
+ARG ApiKey=''
+ARG Username=''
+ARG Password=''
+
+ENV ApiKey=${ApiKey}
+ENV Username=${Username}
+ENV Password=${Password}
+
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
 RUN apt-get install -y nodejs
