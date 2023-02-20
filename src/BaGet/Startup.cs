@@ -2,12 +2,12 @@ using System;
 using BaGet.Core;
 using BaGet.Hosting;
 using Microsoft.AspNetCore.Authentication;
+using BaGet.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
-using Microsoft.AspNetCore.SpaServices.StaticFiles;
+using Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -22,12 +22,10 @@ namespace BaGet
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
-        public IConfiguration Configuration { get; }
+        private IConfiguration Configuration { get; }
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddBaGetOptions<IISServerOptions>(nameof(IISServerOptions));
-
             // TODO: Ideally we'd use:
             //
             //       services.ConfigureOptions<ConfigureBaGetOptions>();
@@ -41,7 +39,7 @@ namespace BaGet
             services.AddTransient<IConfigureOptions<IISServerOptions>, ConfigureBaGetOptions>();
             services.AddTransient<IValidateOptions<BaGetOptions>, ConfigureBaGetOptions>();
 
-            services.AddSpaStaticFiles(ConfigureSpaStaticFiles);
+            services.AddBaGetOptions<IISServerOptions>(nameof(IISServerOptions));
             services.AddBaGetWebApplication(ConfigureBaGetApplication);
 
             services.AddAuthentication("BasicAuthentication")
@@ -52,17 +50,13 @@ namespace BaGet
             // activated. BaGet will run through all its providers until it finds one that is active.
             services.AddScoped(DependencyInjectionExtensions.GetServiceFromProviders<IContext>);
             services.AddTransient(DependencyInjectionExtensions.GetServiceFromProviders<IStorageService>);
-            services.AddTransient(DependencyInjectionExtensions.GetServiceFromProviders<IPackageService>);
+            services.AddTransient(DependencyInjectionExtensions.GetServiceFromProviders<IPackageDatabase>);
             services.AddTransient(DependencyInjectionExtensions.GetServiceFromProviders<ISearchService>);
             services.AddTransient(DependencyInjectionExtensions.GetServiceFromProviders<ISearchIndexer>);
 
-            services.AddCors();
-        }
+            services.AddSingleton<IConfigureOptions<MvcRazorRuntimeCompilationOptions>, ConfigureRazorRuntimeCompilation>();
 
-        private void ConfigureSpaStaticFiles(SpaStaticFilesOptions options)
-        {
-            // In production, the UI files will be served from this directory
-            options.RootPath = "BaGet.UI/build";
+            services.AddCors();
         }
 
         private void ConfigureBaGetApplication(BaGetApplication app)
@@ -99,8 +93,7 @@ namespace BaGet
             app.UseForwardedHeaders();
             app.UsePathBase(options.PathBase);
 
-            app.UseSpaStaticFiles();
-
+            app.UseStaticFiles();
             app.UseRouting();
 
             app.UseAuthentication();
@@ -111,19 +104,9 @@ namespace BaGet
 
             app.UseEndpoints(endpoints =>
             {
-                var api = new BaGetApi();
+                var baget = new BaGetEndpointBuilder();
 
-                api.MapRoutes(endpoints);
-            });
-
-            app.UseSpa(spa =>
-            {
-                spa.Options.SourcePath = "../BaGet.UI";
-
-                if (env.IsDevelopment())
-                {
-                    spa.UseReactDevelopmentServer(npmScript: "start");
-                }
+                baget.MapEndpoints(endpoints);
             });
         }
     }

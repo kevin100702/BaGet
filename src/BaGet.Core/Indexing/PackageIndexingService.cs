@@ -10,7 +10,7 @@ namespace BaGet.Core
 {
     public class PackageIndexingService : IPackageIndexingService
     {
-        private readonly IPackageService _packages;
+        private readonly IPackageDatabase _packages;
         private readonly IPackageStorageService _storage;
         private readonly ISearchIndexer _search;
         private readonly SystemTime _time;
@@ -18,7 +18,7 @@ namespace BaGet.Core
         private readonly ILogger<PackageIndexingService> _logger;
 
         public PackageIndexingService(
-            IPackageService packages,
+            IPackageDatabase packages,
             IPackageStorageService storage,
             ISearchIndexer search,
             SystemTime time,
@@ -49,12 +49,12 @@ namespace BaGet.Core
                     package.Published = _time.UtcNow;
 
                     nuspecStream = await packageReader.GetNuspecAsync(cancellationToken);
-                    nuspecStream = await nuspecStream.AsTemporaryFileStreamAsync();
+                    nuspecStream = await nuspecStream.AsTemporaryFileStreamAsync(cancellationToken);
 
                     if (package.HasReadme)
                     {
                         readmeStream = await packageReader.GetReadmeAsync(cancellationToken);
-                        readmeStream = await readmeStream.AsTemporaryFileStreamAsync();
+                        readmeStream = await readmeStream.AsTemporaryFileStreamAsync(cancellationToken);
                     }
                     else
                     {
@@ -64,7 +64,7 @@ namespace BaGet.Core
                     if (package.HasEmbeddedIcon)
                     {
                         iconStream = await packageReader.GetIconAsync(cancellationToken);
-                        iconStream = await iconStream.AsTemporaryFileStreamAsync();
+                        iconStream = await iconStream.AsTemporaryFileStreamAsync(cancellationToken);
                     }
                     else
                     {

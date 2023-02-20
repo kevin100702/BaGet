@@ -4,7 +4,6 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.Testing;
 using NuGet.Configuration;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
@@ -17,24 +16,25 @@ namespace BaGet.Tests
     /// <summary>
     /// Uses the official NuGet client to interact with the BaGet test host.
     /// </summary>
-    public class NuGetClientIntegrationTests : IClassFixture<BaGetWebApplicationFactory>
+    public class NuGetClientIntegrationTests : IDisposable
     {
-        private readonly WebApplicationFactory<Startup> _factory;
+        private readonly BaGetApplication _app;
         private readonly HttpClient _client;
+
+        private readonly Stream _packageStream;
 
         private readonly SourceRepository _repository;
         private readonly SourceCacheContext _cache;
         private readonly NuGet.Common.ILogger _logger;
         private readonly CancellationToken _cancellationToken;
 
-        public NuGetClientIntegrationTests(
-            BaGetWebApplicationFactory factory,
-            ITestOutputHelper output)
+        public NuGetClientIntegrationTests(ITestOutputHelper output)
         {
-            _factory = factory.WithOutput(output);
-            _client = _factory.CreateDefaultClient();
+            _app = new BaGetApplication(output);
+            _client = _app.CreateDefaultClient();
+            _packageStream = TestResources.GetResourceStream(TestResources.Package);
 
-            var sourceUri = new Uri(_factory.Server.BaseAddress, "v3/index.json");
+            var sourceUri = new Uri(_app.Server.BaseAddress, "v3/index.json");
             var packageSource = new PackageSource(sourceUri.AbsoluteUri);
             var providers = new List<Lazy<INuGetResourceProvider>>();
 
@@ -42,7 +42,7 @@ namespace BaGet.Tests
             providers.AddRange(Repository.Provider.GetCoreV3());
 
             _repository = new SourceRepository(packageSource, providers);
-            _cache = new SourceCacheContext() { NoCache = true, MaxAge = new DateTimeOffset(), DirectDownload = true };
+            _cache = new SourceCacheContext { NoCache = true, MaxAge = new DateTimeOffset(), DirectDownload = true };
             _logger = NuGet.Common.NullLogger.Instance;
             _cancellationToken = CancellationToken.None;
         }
@@ -65,7 +65,7 @@ namespace BaGet.Tests
         [Fact]
         public async Task SearchReturnsResults()
         {
-            await _factory.AddPackageAsync(PackageData.Default);
+            await _app.AddPackageAsync(_packageStream);
 
             var resource = await _repository.GetResourceAsync<PackageSearchResource>();
             var searchFilter = new SearchFilter(includePrerelease: true);
@@ -80,10 +80,10 @@ namespace BaGet.Tests
 
             var result = Assert.Single(results);
 
-            Assert.Equal("DefaultPackage", result.Identity.Id);
+            Assert.Equal("TestData", result.Identity.Id);
             Assert.Equal("1.2.3", result.Identity.Version.ToNormalizedString());
-            Assert.Equal("Default package description", result.Description);
-            Assert.Equal("Default package author", result.Authors);
+            Assert.Equal("Test description", result.Description);
+            Assert.Equal("Test author", result.Authors);
             Assert.Equal(0, result.DownloadCount);
 
             var versions = await result.GetVersionsAsync();
@@ -113,7 +113,7 @@ namespace BaGet.Tests
         [Fact]
         public async Task AutocompleteReturnsResults()
         {
-            await _factory.AddPackageAsync(PackageData.Default);
+            await _app.AddPackageAsync(_packageStream);
 
             var resource = await _repository.GetResourceAsync<AutoCompleteResource>();
             var results = await resource.IdStartsWith(
@@ -124,7 +124,7 @@ namespace BaGet.Tests
 
             var result = Assert.Single(results);
 
-            Assert.Equal("DefaultPackage", result);
+            Assert.Equal("TestData", result);
         }
 
         [Fact]
@@ -143,11 +143,11 @@ namespace BaGet.Tests
         [Fact]
         public async Task VersionListReturnsResults()
         {
-            await _factory.AddPackageAsync(PackageData.Default);
+            await _app.AddPackageAsync(_packageStream);
 
             var resource = await _repository.GetResourceAsync<FindPackageByIdResource>();
             var versions = await resource.GetAllVersionsAsync(
-                "DefaultPackage",
+                "TestData",
                 _cache,
                 _logger,
                 _cancellationToken);
@@ -171,12 +171,12 @@ namespace BaGet.Tests
         }
 
         [Theory]
-        [InlineData("DefaultPackage", "1.0.0", false)]
-        [InlineData("DefaultPackage", "1.2.3", true)]
+        [InlineData("TestData", "1.0.0", false)]
+        [InlineData("TestData", "1.2.3", true)]
         [InlineData("PackageDoesNotExists", "1.0.0", false)]
         public async Task PackageExistsWorks(string packageId, string packageVersion, bool exists)
         {
-            await _factory.AddPackageAsync(PackageData.Default);
+            await _app.AddPackageAsync(_packageStream);
 
             var version = NuGetVersion.Parse(packageVersion);
             var resource = await _repository.GetResourceAsync<FindPackageByIdResource>();
@@ -191,12 +191,12 @@ namespace BaGet.Tests
         }
 
         [Theory]
-        [InlineData("DefaultPackage", "1.0.0", false)]
-        [InlineData("DefaultPackage", "1.2.3", true)]
+        [InlineData("TestData", "1.0.0", false)]
+        [InlineData("TestData", "1.2.3", true)]
         [InlineData("PackageDoesNotExists", "1.0.0", false)]
         public async Task PackageDownloadWorks(string packageId, string packageVersion, bool exists)
         {
-            await _factory.AddPackageAsync(PackageData.Default);
+            await _app.AddPackageAsync(_packageStream);
 
             using var packageStream = new MemoryStream();
 
@@ -219,11 +219,11 @@ namespace BaGet.Tests
         [Fact]
         public async Task PackageMetadataReturnsOk()
         {
-            await _factory.AddPackageAsync(PackageData.Default);
+            await _app.AddPackageAsync(_packageStream);
 
             var resource = await _repository.GetResourceAsync<PackageMetadataResource>();
             var packages = await resource.GetMetadataAsync(
-                "DefaultPackage",
+                "TestData",
                 includePrerelease: true,
                 includeUnlisted: true,
                 _cache,
@@ -232,10 +232,10 @@ namespace BaGet.Tests
 
             var package = Assert.Single(packages);
 
-            Assert.Equal("DefaultPackage", package.Identity.Id);
+            Assert.Equal("TestData", package.Identity.Id);
             Assert.Equal("1.2.3", package.Identity.Version.ToNormalizedString());
-            Assert.Equal("Default package description", package.Description);
-            Assert.Equal("Default package author", package.Authors);
+            Assert.Equal("Test description", package.Description);
+            Assert.Equal("Test author", package.Authors);
             Assert.True(package.IsListed);
         }
 
@@ -252,6 +252,13 @@ namespace BaGet.Tests
                 _cancellationToken);
 
             Assert.Empty(packages);
+        }
+
+        public void Dispose()
+        {
+            _app.Dispose();
+            _client.Dispose();
+            _cache.Dispose();
         }
     }
 }

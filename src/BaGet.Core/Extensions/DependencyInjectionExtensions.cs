@@ -74,6 +74,7 @@ namespace BaGet.Core
             services.TryAddSingleton<IFrameworkCompatibilityService, FrameworkCompatibilityService>();
             services.TryAddSingleton<IPackageDownloadsSource, PackageDownloadsJsonSource>();
 
+            services.TryAddSingleton<ISearchResponseBuilder, SearchResponseBuilder>();
             services.TryAddSingleton<NuGetClient>();
             services.TryAddSingleton<NullSearchIndexer>();
             services.TryAddSingleton<NullSearchService>();
@@ -91,6 +92,7 @@ namespace BaGet.Core
             services.TryAddTransient<IPackageDeletionService, PackageDeletionService>();
             services.TryAddTransient<IPackageIndexingService, PackageIndexingService>();
             services.TryAddTransient<IPackageMetadataService, DefaultPackageMetadataService>();
+            services.TryAddTransient<IPackageService, PackageService>();
             services.TryAddTransient<IPackageStorageService, PackageStorageService>();
             services.TryAddTransient<IServiceIndexService, BaGetServiceIndex>();
             services.TryAddTransient<ISymbolIndexingService, SymbolIndexingService>();
@@ -98,15 +100,14 @@ namespace BaGet.Core
 
             services.TryAddTransient<DatabaseSearchService>();
             services.TryAddTransient<FileStorageService>();
-            services.TryAddTransient<MirrorService>();
-            services.TryAddTransient<MirrorV2Client>();
-            services.TryAddTransient<MirrorV3Client>();
-            services.TryAddTransient<NullMirrorService>();
-            services.TryAddSingleton<NullStorageService>();
             services.TryAddTransient<PackageService>();
+            services.TryAddTransient<V2UpstreamClient>();
+            services.TryAddTransient<V3UpstreamClient>();
+            services.TryAddTransient<DisabledUpstreamClient>();
+            services.TryAddSingleton<NullStorageService>();
+            services.TryAddTransient<PackageDatabase>();
 
-            services.TryAddTransient(IMirrorServiceFactory);
-            services.TryAddTransient(IMirrorNuGetClientFactory);
+            services.TryAddTransient(UpstreamClientFactory);
         }
 
         private static void AddDefaultProviders(this IServiceCollection services)
@@ -194,20 +195,25 @@ namespace BaGet.Core
                 options.Value.PackageSource.ToString());
         }
 
-        private static IMirrorService IMirrorServiceFactory(IServiceProvider provider)
+        private static IUpstreamClient UpstreamClientFactory(IServiceProvider provider)
         {
             var options = provider.GetRequiredService<IOptionsSnapshot<MirrorOptions>>();
-            var service = options.Value.Enabled ? typeof(MirrorService) : typeof(NullMirrorService);
-            
-            return (IMirrorService)provider.GetRequiredService(service);
-        }
 
-        private static IMirrorNuGetClient IMirrorNuGetClientFactory(IServiceProvider provider)
-        {
-            var options = provider.GetRequiredService<IOptionsSnapshot<MirrorOptions>>();
-            var service = options.Value.Legacy ? typeof(MirrorV2Client) : typeof(MirrorV3Client);
+            // TODO: Convert to switch expression.
+            if (!options.Value.Enabled)
+            {
+                return provider.GetRequiredService<DisabledUpstreamClient>();
+            }
 
-            return (IMirrorNuGetClient)provider.GetRequiredService(service);
+            else if (options.Value.Legacy)
+            {
+                return provider.GetRequiredService<V2UpstreamClient>();
+            }
+
+            else
+            {
+                return provider.GetRequiredService<V3UpstreamClient>();
+            }
         }
     }
 }
