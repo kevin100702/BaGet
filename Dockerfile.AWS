@@ -1,0 +1,44 @@
+FROM mcr.microsoft.com/dotnet/aspnet:3.1 AS base
+WORKDIR /app
+EXPOSE 80
+
+ARG ApiKey=''
+ARG Username=''
+ARG Password=''
+
+ARG Storage_Region=''
+ARG Storage_Bucket=''
+ARG Storage_AccessKey=''
+ARG Storage_SecretKey=''
+
+ARG Database__Type=''
+ARG Database__ConnectionString=''
+
+ENV ApiKey=${ApiKey}
+ENV Username=${Username}
+ENV Password=${Password}
+
+ENV Storage__Type="AwsS3"
+ENV Storage__Region=${Storage_Region}
+ENV Storage_Bucket=${Storage_Bucket}
+ENV Storage_AccessKey=${Storage_AccessKey}
+ENV Storage_SecretKey=${Storage_SecretKey}
+
+ENV Database__Type=${Database__Type}
+ENV Database__ConnectionString=${Database__ConnectionString}
+ENV Search__Type=Database
+
+FROM mcr.microsoft.com/dotnet/sdk:3.1 AS build
+WORKDIR /src
+COPY /src .
+RUN dotnet restore BaGet
+RUN dotnet build BaGet -c Release -o /app
+
+FROM build AS publish
+RUN dotnet publish BaGet -c Release -o /app
+
+FROM base AS final
+LABEL org.opencontainers.image.source="https://github.com/loic-sharma/BaGet"
+WORKDIR /app
+COPY --from=publish /app .
+ENTRYPOINT ["dotnet", "BaGet.dll"]
