@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json.Serialization;
 
-namespace BaGet.Hosting
+namespace BaGet.Web
 {
     public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
@@ -35,10 +35,14 @@ namespace BaGet.Hosting
             // skip authentication if endpoint has [AllowAnonymous] attribute
             var endpoint = Context.GetEndpoint();
             if (endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null)
-                return AuthenticateResult.NoResult();
+                return await Task.FromResult(AuthenticateResult.NoResult());
 
             if (!Request.Headers.ContainsKey("Authorization"))
-                return AuthenticateResult.Fail("Missing Authorization Header");
+            {
+                Response.StatusCode = 401;
+                Response.Headers.Add("WWW-Authenticate", "Basic realm=\"\", charset=\"UTF-8\"");
+                return await Task.FromResult(AuthenticateResult.Fail("Missing Authorization Header"));
+            }
 
             User user = null;
             try
@@ -51,6 +55,8 @@ namespace BaGet.Hosting
 
                 if (username != _baGetOptions.Value.Username || password != _baGetOptions.Value.Password)
                 {
+                    Response.StatusCode = 401;
+                    Response.Headers.Add("WWW-Authenticate", "Basic realm=\"\", charset=\"UTF-8\"");
                     return await Task.FromResult(AuthenticateResult.Fail("The username or password is not correct."));
                 }
                 else
@@ -59,11 +65,18 @@ namespace BaGet.Hosting
             }
             catch
             {
-                return AuthenticateResult.Fail("Invalid Authorization Header");
+                Response.StatusCode = 401;
+                Response.Headers.Add("WWW-Authenticate", "Basic realm=\"\", charset=\"UTF-8\"");
+                return await Task.FromResult(AuthenticateResult.Fail("Invalid Authorization Header"));
             }
 
             if (user == null)
-                return AuthenticateResult.Fail("Invalid Username or Password");
+            {
+                Response.StatusCode = 401;
+                Response.Headers.Add("WWW-Authenticate", "Basic realm=\"\", charset=\"UTF-8\"");
+                return await Task.FromResult(AuthenticateResult.Fail("Invalid Username or Password"));
+            }
+                
 
             var claims = new[] {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -73,13 +86,7 @@ namespace BaGet.Hosting
             var principal = new ClaimsPrincipal(identity);
             var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
-            return AuthenticateResult.Success(ticket);
-        }
-
-        protected override Task HandleChallengeAsync(AuthenticationProperties properties)
-        {
-            Response.Headers["WWW-Authenticate"] = "Basic realm=\"\", charset=\"UTF-8\"";
-            return base.HandleChallengeAsync(properties);
+            return await Task.FromResult(AuthenticateResult.Success(ticket));
         }
     }
 

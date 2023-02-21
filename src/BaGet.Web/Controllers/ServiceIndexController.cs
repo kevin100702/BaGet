@@ -11,6 +11,7 @@ namespace BaGet.Web
     /// <summary>
     /// The NuGet Service Index. This aids NuGet client to discover this server's services.
     /// </summary>
+    [Authorize]
     public class ServiceIndexController : Controller
     {
         private readonly IServiceIndexService _serviceIndex;

@@ -1,8 +1,7 @@
 using System;
 using BaGet.Core;
-using BaGet.Hosting;
-using Microsoft.AspNetCore.Authentication;
 using BaGet.Web;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
