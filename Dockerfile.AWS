@@ -6,10 +6,10 @@ ARG ApiKey=''
 ARG Username=''
 ARG Password=''
 
-ARG Storage_Region=''
-ARG Storage_Bucket=''
-ARG Storage_AccessKey=''
-ARG Storage_SecretKey=''
+ARG Storage__Region=''
+ARG Storage__Bucket=''
+ARG Storage__AccessKey=''
+ARG Storage__SecretKey=''
 
 ARG Database__Type=''
 ARG Database__ConnectionString=''
@@ -19,10 +19,10 @@ ENV Username=${Username}
 ENV Password=${Password}
 
 ENV Storage__Type="AwsS3"
-ENV Storage__Region=${Storage_Region}
-ENV Storage_Bucket=${Storage_Bucket}
-ENV Storage_AccessKey=${Storage_AccessKey}
-ENV Storage_SecretKey=${Storage_SecretKey}
+ENV Storage__Region=${Storage__Region}
+ENV Storage__Bucket=${Storage__Bucket}
+ENV Storage__AccessKey=${Storage__AccessKey}
+ENV Storage__SecretKey=${Storage__SecretKey}
 
 ENV Database__Type=${Database__Type}
 ENV Database__ConnectionString=${Database__ConnectionString}
