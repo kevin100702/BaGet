@@ -2,6 +2,7 @@ using System;
 using BaGet.Core;
 using BaGet.Web;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BaGet

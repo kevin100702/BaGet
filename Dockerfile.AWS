@@ -6,9 +6,27 @@ ARG ApiKey=''
 ARG Username=''
 ARG Password=''
 
+ARG Storage__Region=''
+ARG Storage__Bucket=''
+ARG Storage__AccessKey=''
+ARG Storage__SecretKey=''
+
+ARG Database__Type=''
+ARG Database__ConnectionString=''
+
 ENV ApiKey=${ApiKey}
 ENV Username=${Username}
 ENV Password=${Password}
+
+ENV Storage__Type="AwsS3"
+ENV Storage__Region=${Storage__Region}
+ENV Storage__Bucket=${Storage__Bucket}
+ENV Storage__AccessKey=${Storage__AccessKey}
+ENV Storage__SecretKey=${Storage__SecretKey}
+
+ENV Database__Type=${Database__Type}
+ENV Database__ConnectionString=${Database__ConnectionString}
+ENV Search__Type=Database
 
 FROM mcr.microsoft.com/dotnet/sdk:3.1 AS build
 WORKDIR /src
